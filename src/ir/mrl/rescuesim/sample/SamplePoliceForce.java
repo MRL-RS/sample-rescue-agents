@@ -1,6 +1,6 @@
 package ir.mrl.rescuesim.sample;
 
-import com.mrl.debugger.remote.ViewerGateway;
+import com.mrl.debugger.remote.VDClient;
 import rescuecore2.log.Logger;
 import rescuecore2.messages.Command;
 import rescuecore2.misc.geometry.GeometryTools2D;
@@ -12,10 +12,6 @@ import rescuecore2.worldmodel.ChangeSet;
 import rescuecore2.worldmodel.EntityID;
 
 import java.io.Serializable;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.util.*;
 
 /**
@@ -25,7 +21,8 @@ public class SamplePoliceForce extends AbstractSampleAgent<PoliceForce> {
     private static final String DISTANCE_KEY = "clear.repair.distance";
 
     private int distance;
-    private ViewerGateway viewerGateway;
+    //    private ViewerGateway viewerGateway;
+    private VDClient vdClient = VDClient.getInstance();
     private List<StandardEntity> buildings;
     private Random random = new Random();
 
@@ -40,8 +37,6 @@ public class SamplePoliceForce extends AbstractSampleAgent<PoliceForce> {
         model.indexClass(StandardEntityURN.ROAD);
         distance = config.getIntValue(DISTANCE_KEY);
         buildings = new ArrayList<>(model.getEntitiesOfType(StandardEntityURN.BUILDING));
-        lookupViewerGateway();
-
     }
 
     @Override
@@ -54,11 +49,7 @@ public class SamplePoliceForce extends AbstractSampleAgent<PoliceForce> {
 
         List<Integer> randomBuildings = getRandomBuildings();
 
-        try {
-            viewerGateway.draw(me().getID().getValue(), "MrlSampleBuildingsLayer", 0, (Serializable) randomBuildings);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
+        vdClient.drawAsync(me().getID().getValue(), "MrlSampleBuildingsLayer", (Serializable) randomBuildings);
 
 
         for (Command next : heard) {
@@ -89,7 +80,6 @@ public class SamplePoliceForce extends AbstractSampleAgent<PoliceForce> {
         }
 
 
-
         // Plan a path to a blocked area
         List<EntityID> path = search.breadthFirstSearch(me().getPosition(), getBlockedRoads());
         if (path != null) {
@@ -104,15 +94,6 @@ public class SamplePoliceForce extends AbstractSampleAgent<PoliceForce> {
         Logger.debug("Couldn't plan a path to a blocked road");
         Logger.info("Moving randomly");
         sendMove(time, randomWalk());
-    }
-
-    private void lookupViewerGateway() {
-        try {
-            Registry registry = LocateRegistry.getRegistry(null);
-            viewerGateway = (ViewerGateway) registry.lookup("com.mrl.debugger.remote.ViewerGateway");
-        } catch (RemoteException | NotBoundException e) {
-            e.printStackTrace();
-        }
     }
 
     private List<Integer> getRandomBuildings() {

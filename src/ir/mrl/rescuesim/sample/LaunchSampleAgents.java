@@ -1,37 +1,42 @@
 package ir.mrl.rescuesim.sample;
 
-import java.io.IOException;
-
+import com.mrl.debugger.remote.VDClient;
+import rescuecore2.Constants;
+import rescuecore2.components.ComponentConnectionException;
 import rescuecore2.components.ComponentLauncher;
 import rescuecore2.components.TCPComponentLauncher;
-import rescuecore2.components.ComponentConnectionException;
-import rescuecore2.connection.ConnectionException;
-import rescuecore2.registry.Registry;
-import rescuecore2.misc.CommandLineOptions;
 import rescuecore2.config.Config;
 import rescuecore2.config.ConfigException;
-import rescuecore2.Constants;
+import rescuecore2.connection.ConnectionException;
 import rescuecore2.log.Logger;
-
+import rescuecore2.misc.CommandLineOptions;
+import rescuecore2.registry.Registry;
 import rescuecore2.standard.entities.StandardEntityFactory;
 import rescuecore2.standard.entities.StandardPropertyFactory;
 import rescuecore2.standard.messages.StandardMessageFactory;
 
+import java.io.IOException;
+
 /**
-   Launcher for sample agents. This will launch as many instances of each of the sample agents as possible, all using one connction.
+ * Launcher for sample agents. This will launch as many instances of each of the sample agents as possible, all using one connction.
  */
 public final class LaunchSampleAgents {
     private static final String FIRE_BRIGADE_FLAG = "-fb";
     private static final String POLICE_FORCE_FLAG = "-pf";
     private static final String AMBULANCE_TEAM_FLAG = "-at";
-    private static final String CIVILIAN_FLAG = "-cv";
 
-    private LaunchSampleAgents() {}
+    private static final String VD_HOST_FLAG = "-vdh";
+    private static final String VD_PORT_FLAG = "-vdp";
+
+
+    private LaunchSampleAgents() {
+    }
 
     /**
-       Launch 'em!
-       @param args The following arguments are understood: -p <port>, -h <hostname>, -fb <fire brigades>, -pf <police forces>, -at <ambulance teams>
-    */
+     * Launch 'em!
+     *
+     * @param args The following arguments are understood: -p <port>, -h <hostname>, -fb <fire brigades>, -pf <police forces>, -at <ambulance teams>
+     */
     public static void main(String[] args) {
         Logger.setLogContext("sample");
         try {
@@ -45,36 +50,39 @@ public final class LaunchSampleAgents {
             int fb = -1;
             int pf = -1;
             int at = -1;
+            String vdh = VDClient.DEFAULT_HOST_ADDRESS;
+            int vdp = VDClient.DEFAULT_PORT_NUMBER;
             // CHECKSTYLE:OFF:ModifiedControlVariable
             for (int i = 0; i < args.length; ++i) {
-                if (args[i].equals(FIRE_BRIGADE_FLAG)) {
-                    fb = Integer.parseInt(args[++i]);
-                }
-                else if (args[i].equals(POLICE_FORCE_FLAG)) {
-                    pf = Integer.parseInt(args[++i]);
-                }
-                else if (args[i].equals(AMBULANCE_TEAM_FLAG)) {
-                    at = Integer.parseInt(args[++i]);
-                }
-                else {
-                    Logger.warn("Unrecognised option: " + args[i]);
+                switch (args[i]) {
+                    case FIRE_BRIGADE_FLAG:
+                        fb = Integer.parseInt(args[++i]);
+                        break;
+                    case POLICE_FORCE_FLAG:
+                        pf = Integer.parseInt(args[++i]);
+                        break;
+                    case AMBULANCE_TEAM_FLAG:
+                        at = Integer.parseInt(args[++i]);
+                        break;
+                    case VD_HOST_FLAG:
+                        vdh = args[++i];
+                        break;
+                    case VD_PORT_FLAG:
+                        vdp = Integer.parseInt(args[++i]);
+                        break;
+                    default:
+                        Logger.warn("Unrecognised option: " + args[i]);
+                        break;
                 }
             }
+            VDClient.getInstance().init(vdh, vdp);
             // CHECKSTYLE:ON:ModifiedControlVariable
             ComponentLauncher launcher = new TCPComponentLauncher(host, port, config);
             connect(launcher, fb, pf, at, config);
-        }
-        catch (IOException e) {
+        } catch (IOException | ConnectionException | InterruptedException e) {
             Logger.error("Error connecting agents", e);
-        }
-        catch (ConfigException e) {
+        } catch (ConfigException e) {
             Logger.error("Configuration error", e);
-        }
-        catch (ConnectionException e) {
-            Logger.error("Error connecting agents", e);
-        }
-        catch (InterruptedException e) {
-            Logger.error("Error connecting agents", e);
         }
     }
 
@@ -86,8 +94,7 @@ public final class LaunchSampleAgents {
                 launcher.connect(new SampleFireBrigade());
                 Logger.info("success");
             }
-        }
-        catch (ComponentConnectionException e) {
+        } catch (ComponentConnectionException e) {
             Logger.info("failed: " + e.getMessage());
         }
         try {
@@ -96,8 +103,7 @@ public final class LaunchSampleAgents {
                 launcher.connect(new SamplePoliceForce());
                 Logger.info("success");
             }
-        }
-        catch (ComponentConnectionException e) {
+        } catch (ComponentConnectionException e) {
             Logger.info("failed: " + e.getMessage());
         }
         try {
@@ -106,8 +112,7 @@ public final class LaunchSampleAgents {
                 launcher.connect(new SampleAmbulanceTeam());
                 Logger.info("success");
             }
-        }
-        catch (ComponentConnectionException e) {
+        } catch (ComponentConnectionException e) {
             Logger.info("failed: " + e.getMessage());
         }
         try {
@@ -116,8 +121,7 @@ public final class LaunchSampleAgents {
                 launcher.connect(new SampleCentre());
                 Logger.info("success");
             }
-        }
-        catch (ComponentConnectionException e) {
+        } catch (ComponentConnectionException e) {
             Logger.info("failed: " + e.getMessage());
         }
     /*    try {
